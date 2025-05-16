@@ -1,0 +1,53 @@
+
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>İşlem Önceliği Oyunu</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="header">
+    <h1>🧮 İşlem Önceliği Oyunu</h1>
+    <div class="status">
+      <span id="score">Puan: 0</span>
+      <span id="timer">Süre: 40</span>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section id="leaderboard" class="box leaderboard">
+      <h3>🏆 Liderlik Tablosu (İlk 10)</h3>
+      <ol id="leaderboard-list"></ol>
+    </section>
+
+    <section id="question-box" class="box question">
+      <div id="question-text"></div>
+      <div id="options"></div>
+    </section>
+
+    <section id="question-path" class="path-grid"></section>
+  </main>
+
+  <div class="info-note">
+    <strong>📐 İşlem Önceliği:</strong><br>
+    1️⃣ Üs alma (varsa)<br>
+    2️⃣ Parantez içi<br>
+    3️⃣ Çarpma / Bölme (soldan sağa)<br>
+    4️⃣ Toplama / Çıkarma (soldan sağa)
+  </div>
+
+  <footer class="footer">
+    <div id="result-screen" class="hidden">
+      <h2 id="result-message"></h2>
+      <button onclick="restartGame()">🔁 Yeniden Oyna</button>
+    </div>
+  </footer>
+
+  <audio id="correctSound" src="correct.mp3"></audio>
+  <audio id="wrongSound" src="wrong.mp3"></audio>
+
+  <script src="script.js"></script>
+</body>
+</html>
