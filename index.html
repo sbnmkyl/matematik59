@@ -1,53 +1,2102 @@
-
 <!DOCTYPE html>
 <html lang="tr">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>İşlem Önceliği Oyunu</title>
-  <link rel="stylesheet" href="style.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sürdürülebilir Rota</title>
+  <style>
+    :root {
+      --bg: #0b1020;
+      --path: #202a52;
+      --accent: #76ff9e;
+      --accent-soft: rgba(118,255,158,0.6);
+      --secondary: #9ad7ff;
+      --panel: rgba(17, 26, 54, 0.92);
+      --text: #f3f6ff;
+      --shadow: 0 18px 45px rgba(0, 0, 0, 0.45);
+      font-family: "Nunito", "Segoe UI", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      overflow: hidden;
+      font-family: inherit;
+    }
+
+    canvas {
+      display: block;
+      width: 100vw;
+      height: 100vh;
+      background: radial-gradient(circle at 50% 20%, rgba(118,255,158,0.05), transparent 60%), var(--bg);
+    }
+
+    .hud {
+      position: fixed;
+      top: 16px;
+      left: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      z-index: 20;
+    }
+
+    .chip {
+      background: rgba(12, 22, 50, 0.85);
+      padding: 10px 18px;
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 600;
+      letter-spacing: 0.2px;
+      transition: transform 0.3s ease;
+    }
+
+    .chip.glow {
+      box-shadow: 0 0 0 2px var(--accent-soft), 0 12px 24px rgba(0, 0, 0, 0.35);
+      transform: translateY(-3px);
+    }
+
+    .progress-wrapper {
+      width: 240px;
+      background: rgba(10, 15, 35, 0.7);
+      border-radius: 20px;
+      padding: 6px;
+      box-shadow: var(--shadow);
+    }
+
+    .progress-bar {
+      height: 16px;
+      border-radius: 14px;
+      background: rgba(255,255,255,0.08);
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--accent), #4be0ff);
+      border-radius: inherit;
+      transition: width 0.4s ease;
+    }
+
+    .collection-btn {
+      position: fixed;
+      bottom: 20px;
+      left: 20px;
+      background: rgba(12, 22, 50, 0.88);
+      border: none;
+      border-radius: 18px;
+      padding: 10px 18px;
+      color: var(--text);
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: var(--shadow);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      transition: transform 0.2s ease;
+      z-index: 22;
+    }
+
+    .collection-btn:hover {
+      transform: translateY(-2px);
+    }
+
+    .collection-panel {
+      position: fixed;
+      bottom: 80px;
+      left: 20px;
+      width: min(320px, calc(100vw - 40px));
+      max-height: 60vh;
+      overflow-y: auto;
+      background: var(--panel);
+      border-radius: 22px;
+      padding: 18px;
+      box-shadow: var(--shadow);
+      display: none;
+      z-index: 22;
+    }
+
+    .collection-panel.open {
+      display: block;
+      animation: floatUp 0.4s ease;
+    }
+
+    .collection-panel h3 {
+      margin: 0 0 12px;
+      font-size: 18px;
+      color: var(--accent);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .collection-list {
+      display: grid;
+      gap: 10px;
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    }
+
+    .collection-card {
+      background: rgba(255,255,255,0.04);
+      border-radius: 16px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      text-align: center;
+      border: 1px solid rgba(118,255,158,0.15);
+      opacity: 0.6;
+      transition: opacity 0.3s ease;
+    }
+
+    .collection-card.collected {
+      opacity: 1;
+      background: rgba(118,255,158,0.08);
+    }
+
+    .top-right {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      display: flex;
+      gap: 12px;
+      z-index: 20;
+    }
+
+    .soft-btn {
+      background: rgba(14, 26, 55, 0.9);
+      border: none;
+      color: var(--text);
+      padding: 10px 16px;
+      border-radius: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: var(--shadow);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: transform 0.2s ease;
+    }
+
+    .soft-btn:hover {
+      transform: translateY(-2px);
+    }
+
+    .overlay {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background: rgba(5, 10, 22, 0.88);
+      backdrop-filter: blur(10px);
+      z-index: 30;
+      transition: opacity 0.3s ease;
+    }
+
+    .overlay.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .menu-card {
+      background: var(--panel);
+      border-radius: 28px;
+      padding: 28px;
+      width: min(520px, 92vw);
+      box-shadow: var(--shadow);
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      text-align: center;
+      animation: floatUp 0.5s ease;
+    }
+
+    .menu-card h1 {
+      margin: 0;
+      font-size: clamp(32px, 5vw, 46px);
+      color: var(--accent);
+      text-shadow: 0 12px 30px rgba(118,255,158,0.4);
+    }
+
+    .menu-card p {
+      margin: 0;
+      color: rgba(255,255,255,0.75);
+      font-size: 18px;
+    }
+
+    .menu-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .menu-actions button {
+      padding: 14px;
+      border-radius: 16px;
+      border: none;
+      background: linear-gradient(120deg, rgba(118,255,158,0.85), rgba(154,215,255,0.85));
+      color: #071120;
+      font-size: 17px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 18px 40px rgba(118,255,158,0.2);
+      transition: transform 0.2s ease;
+    }
+
+    .menu-actions button.secondary {
+      background: rgba(255,255,255,0.08);
+      color: var(--text);
+      box-shadow: none;
+    }
+
+    .menu-actions button:hover {
+      transform: translateY(-2px);
+    }
+
+    .settings-modal, .help-modal, .pause-card, .info-card, .toast {
+      position: fixed;
+      z-index: 26;
+      background: var(--panel);
+      border-radius: 24px;
+      padding: 24px;
+      box-shadow: var(--shadow);
+      width: min(480px, 92vw);
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      animation: floatUp 0.4s ease;
+    }
+
+    .settings-modal.hidden, .help-modal.hidden, .pause-card.hidden, .info-card.hidden, .toast.hidden {
+      display: none;
+    }
+
+    .settings-grid {
+      display: grid;
+      gap: 16px;
+    }
+
+    label span {
+      display: block;
+      margin-bottom: 6px;
+      font-weight: 600;
+    }
+
+    select, input[type="checkbox"] {
+      width: 100%;
+      padding: 10px;
+      border-radius: 12px;
+      border: none;
+      background: rgba(255,255,255,0.08);
+      color: var(--text);
+      font-size: 15px;
+    }
+
+    .info-card {
+      top: 70px;
+      transform: translate(-50%, 0);
+      width: min(540px, 94vw);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      border: 1px solid rgba(118,255,158,0.3);
+    }
+
+    .info-card h3 {
+      margin: 0;
+      color: var(--accent);
+    }
+
+    .info-card p {
+      margin: 0;
+      color: rgba(255,255,255,0.8);
+      line-height: 1.5;
+    }
+
+    .info-card.fade {
+      animation: fadeAway 4s forwards;
+    }
+
+    .toast {
+      top: auto;
+      bottom: 24px;
+      width: auto;
+      min-width: 180px;
+      transform: translate(-50%, 0);
+      padding: 16px 22px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .mini-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(5, 10, 22, 0.92);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 40;
+      padding: 20px;
+    }
+
+    .mini-modal.hidden {
+      display: none;
+    }
+
+    .mini-card {
+      background: var(--panel);
+      border-radius: 24px;
+      box-shadow: var(--shadow);
+      padding: 24px;
+      width: min(600px, 96vw);
+      max-height: 90vh;
+      overflow: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .mini-card h2 {
+      margin: 0;
+      font-size: 24px;
+      color: var(--accent);
+    }
+
+    .mini-card button {
+      border: none;
+      border-radius: 14px;
+      padding: 12px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .timer-chip {
+      align-self: flex-end;
+      background: rgba(255,255,255,0.08);
+      padding: 8px 12px;
+      border-radius: 14px;
+      font-weight: 600;
+      color: var(--secondary);
+    }
+
+    .match-grid {
+      display: grid;
+      gap: 12px;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    }
+
+    .match-item, .match-target {
+      background: rgba(255,255,255,0.06);
+      border-radius: 16px;
+      padding: 12px;
+      text-align: center;
+      font-weight: 600;
+    }
+
+    .match-item select {
+      margin-top: 8px;
+    }
+
+    .maze-grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 4px;
+      background: rgba(255,255,255,0.05);
+      padding: 12px;
+      border-radius: 16px;
+    }
+
+    .maze-cell {
+      aspect-ratio: 1 / 1;
+      border-radius: 10px;
+      background: rgba(9, 16, 36, 0.9);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .maze-cell.wall {
+      background: rgba(255,255,255,0.12);
+    }
+
+    .maze-player, .maze-exit {
+      width: 100%;
+      height: 100%;
+      display: grid;
+      place-items: center;
+      font-size: 20px;
+    }
+
+    @keyframes floatUp {
+      from {
+        opacity: 0;
+        transform: translate(-50%, 20px);
+      }
+      to {
+        opacity: 1;
+        transform: translate(-50%, 0);
+      }
+    }
+
+    @keyframes fadeAway {
+      0% {
+        opacity: 0;
+      }
+      10% {
+        opacity: 1;
+      }
+      85% {
+        opacity: 1;
+      }
+      100% {
+        opacity: 0;
+      }
+    }
+
+    @media (max-width: 720px) {
+      .hud {
+        left: 12px;
+        top: 12px;
+      }
+      .progress-wrapper {
+        width: 180px;
+      }
+      .top-right {
+        top: auto;
+        bottom: 12px;
+        right: 12px;
+        flex-direction: column;
+      }
+      .soft-btn {
+        padding: 12px 18px;
+      }
+      .menu-card {
+        padding: 22px;
+      }
+      .menu-card h1 {
+        font-size: 36px;
+      }
+      .menu-card p {
+        font-size: 16px;
+      }
+    }
+  </style>
 </head>
 <body>
-  <header class="header">
-    <h1>🧮 İşlem Önceliği Oyunu</h1>
-    <div class="status">
-      <span id="score">Puan: 0</span>
-      <span id="timer">Süre: 40</span>
+  <canvas id="gameCanvas" width="1280" height="720" tabindex="0"></canvas>
+
+  <div class="hud">
+    <div class="chip" id="taskHint">🐾</div>
+    <div class="progress-wrapper">
+      <div style="display:flex;justify-content:space-between;padding:0 4px 6px;">
+        <span id="progressLabel">%0</span>
+        <span id="collectionLabel">0 / 5</span>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
     </div>
-  </header>
-
-  <main class="layout">
-    <section id="leaderboard" class="box leaderboard">
-      <h3>🏆 Liderlik Tablosu (İlk 10)</h3>
-      <ol id="leaderboard-list"></ol>
-    </section>
-
-    <section id="question-box" class="box question">
-      <div id="question-text"></div>
-      <div id="options"></div>
-    </section>
-
-    <section id="question-path" class="path-grid"></section>
-  </main>
-
-  <div class="info-note">
-    <strong>📐 İşlem Önceliği:</strong><br>
-    1️⃣ Üs alma (varsa)<br>
-    2️⃣ Parantez içi<br>
-    3️⃣ Çarpma / Bölme (soldan sağa)<br>
-    4️⃣ Toplama / Çıkarma (soldan sağa)
   </div>
 
-  <footer class="footer">
-    <div id="result-screen" class="hidden">
-      <h2 id="result-message"></h2>
-      <button onclick="restartGame()">🔁 Yeniden Oyna</button>
+  <div class="top-right">
+    <button class="soft-btn" id="menuBtn">☰ Menü</button>
+    <button class="soft-btn" id="settingsBtn">⚙ Ayarlar</button>
+    <button class="soft-btn" id="pauseBtn">⏸ Duraklat</button>
+    <button class="soft-btn" id="helpBtn">❔ Yardım</button>
+  </div>
+
+  <button class="collection-btn" id="collectionBtn">📘 Koleksiyon</button>
+  <div class="collection-panel" id="collectionPanel">
+    <h3>📘 Koleksiyon</h3>
+    <div class="collection-list" id="collectionList"></div>
+  </div>
+
+  <div class="overlay" id="startOverlay">
+    <div class="menu-card">
+      <h1 id="menuTitle">Sürdürülebilir Rota</h1>
+      <p id="menuSubtitle">Kedimizle sürdürülebilir dünyaya yolculuk!</p>
+      <div class="menu-actions">
+        <button id="newGameBtn">🌟 Yeni Oyun</button>
+        <button id="continueBtn" class="secondary">▶️ Devam</button>
+        <button id="dailyBtn" class="secondary">📅 Günlük Görev</button>
+      </div>
     </div>
-  </footer>
+  </div>
 
-  <audio id="correctSound" src="correct.mp3"></audio>
-  <audio id="wrongSound" src="wrong.mp3"></audio>
+  <div class="pause-card hidden" id="pauseCard">
+    <h2 id="pauseTitle">Duraklatıldı</h2>
+    <p id="pauseHint">WASD/Ok: Hareket · E: Görev · P: Duraklat</p>
+    <div class="menu-actions">
+      <button id="resumeBtn">▶️ Devam</button>
+      <button id="pauseMenuBtn" class="secondary">🏠 Menüyü Göster</button>
+    </div>
+  </div>
 
-  <script src="script.js"></script>
+  <div class="settings-modal hidden" id="settingsModal">
+    <h2>⚙ Ayarlar</h2>
+    <div class="settings-grid">
+      <label><span id="langLabel">Dil</span>
+        <select id="languageSelect">
+          <option value="tr">Türkçe</option>
+          <option value="en">English</option>
+        </select>
+      </label>
+      <label><span id="ageLabel">Yaş Seviyesi</span>
+        <select id="ageSelect">
+          <option value="simple">Sade</option>
+          <option value="medium">Orta</option>
+          <option value="advanced">İleri</option>
+        </select>
+      </label>
+      <label><span id="difficultyLabel">Zorluk</span>
+        <select id="difficultySelect">
+          <option value="easy">Easy</option>
+          <option value="normal">Normal</option>
+          <option value="hard">Hard</option>
+        </select>
+      </label>
+      <label style="display:flex;align-items:center;gap:10px;">
+        <input type="checkbox" id="muteToggle" />
+        <span id="muteLabel">Sesi kapat</span>
+      </label>
+      <label style="display:flex;align-items:center;gap:10px;">
+        <input type="checkbox" id="autosaveToggle" checked />
+        <span id="autosaveLabel">Otomatik kaydet</span>
+      </label>
+      <button class="soft-btn" id="closeSettingsBtn">✔ Kapat</button>
+    </div>
+  </div>
+
+  <div class="help-modal hidden" id="helpModal">
+    <h2>❔ Yardım</h2>
+    <p id="helpText">WASD/Ok tuşlarıyla hareket edin, E ile görevleri tamamlayın, P ile duraklatın.</p>
+    <button class="soft-btn" id="closeHelpBtn">✔ Anladım</button>
+  </div>
+
+  <div class="info-card hidden" id="infoCard">
+    <h3 id="infoTitle"></h3>
+    <p id="infoBody"></p>
+  </div>
+
+  <div class="toast hidden" id="toast">⏸</div>
+
+  <div class="mini-modal hidden" id="forestMatchModal">
+    <div class="mini-card">
+      <h2 id="forestMatchTitle">Geri dönüşüm eşleştirme</h2>
+      <div class="timer-chip" id="forestMatchTimer">12</div>
+      <div class="match-grid">
+        <div class="match-item">
+          🗞 Gazete
+          <select data-item="paper">
+            <option value="">-</option>
+            <option value="paper">Kağıt</option>
+            <option value="glass">Cam</option>
+            <option value="plastic">Plastik</option>
+          </select>
+        </div>
+        <div class="match-item">
+          🧴 Şişe
+          <select data-item="glass">
+            <option value="">-</option>
+            <option value="paper">Kağıt</option>
+            <option value="glass">Cam</option>
+            <option value="plastic">Plastik</option>
+          </select>
+        </div>
+        <div class="match-item">
+          🛍 Poşet
+          <select data-item="plastic">
+            <option value="">-</option>
+            <option value="paper">Kağıt</option>
+            <option value="glass">Cam</option>
+            <option value="plastic">Plastik</option>
+          </select>
+        </div>
+      </div>
+      <button class="soft-btn" id="forestMatchSubmit">✔ Tamamla</button>
+    </div>
+  </div>
+
+  <div class="mini-modal hidden" id="oceanBottleModal">
+    <div class="mini-card">
+      <h2 id="oceanBottleTitle">Matara mı?</h2>
+      <div class="timer-chip" id="oceanBottleTimer">12</div>
+      <p id="oceanBottlePrompt">Sence hangisi çevre için daha iyi?</p>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;">
+        <button class="soft-btn" data-choice="bottle">🥤 Tek kullanımlık şişe</button>
+        <button class="soft-btn" data-choice="reusable">💧 Matara</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="mini-modal hidden" id="oceanCatchModal">
+    <div class="mini-card">
+      <h2 id="oceanCatchTitle">Okyanus temizliği</h2>
+      <div class="timer-chip" id="oceanCatchTimer">14</div>
+      <canvas id="catchCanvas" width="420" height="240" style="width:100%;background:#082635;border-radius:18px;"></canvas>
+      <p id="oceanCatchHint">Fare veya dokunuşla ağı hareket ettir, 3 çöp yakala!</p>
+      <button class="soft-btn" id="oceanCatchClose">Vazgeç</button>
+    </div>
+  </div>
+
+  <div class="mini-modal hidden" id="cityMazeModal">
+    <div class="mini-card">
+      <h2 id="cityMazeTitle">Trafik labirenti</h2>
+      <div class="timer-chip" id="cityMazeTimer">15</div>
+      <div class="maze-grid" id="mazeGrid"></div>
+      <p id="cityMazeHint">Ok tuşlarıyla çıkışa ulaş.</p>
+      <button class="soft-btn" id="cityMazeClose">Çık</button>
+    </div>
+  </div>
+
+  <div class="mini-modal hidden" id="bikeChoiceModal">
+    <div class="mini-card">
+      <h2 id="bikeChoiceTitle">Bisiklet mi, araba mı?</h2>
+      <p id="bikeChoicePrompt">Hangisini seçersin?</p>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;">
+        <button class="soft-btn" data-vehicle="bike">🚲 Bisiklet</button>
+        <button class="soft-btn" data-vehicle="car">🚗 Araba</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const L = {
+      tr: {
+        title: "Sürdürülebilir Rota",
+        subtitle: "Kedimizle sürdürülebilir dünyaya yolculuk!",
+        newGame: "Yeni Oyun",
+        cont: "Devam",
+        daily: "Günlük Görev",
+        resume: "Devam",
+        paused: "Duraklatıldı",
+        help: "WASD/Ok: Hareket · E: Görev · P: Duraklat",
+        progress: "İlerleme",
+        collection: "Koleksiyon",
+        tasks: {
+          forest1: "Geri dönüşüm eşleştirme",
+          forest2: "Bez çanta kullan",
+          ocean1: "Matara seçimi",
+          ocean2: "Okyanus temizliği",
+          polar1: "PC kapat",
+          polar2: "LED ampul seç",
+          farm1: "Gıda israfını önle",
+          farm2: "Yerel pazar",
+          city1: "Bisiklet vs Araba",
+          city2: "Trafik labirenti"
+        },
+        info: {
+          forest: {
+            simple: "Kağıdı doğru kutuya atman ~0.4–0.7 kg CO₂ eşdeğeri tasarruf sağlar.",
+            medium: "Her bir kâğıdı doğru kutuya attığında yılda yarım kiloya kadar CO₂ salımını önlersin.",
+            advanced: "Doğru kâğıt geri dönüşümü, liflerin yeniden kullanımını sağlar ve ~0.4–0.7 kg CO₂ eşdeğeri azaltım yaratır."
+          },
+          ocean: {
+            simple: "Matara seçimi yılda ~0.3–0.7 kg plastik atığını önler.",
+            medium: "Tekrar kullanılabilir matara kullanmak, plastik şişe tüketimini azaltır ve yüzlerce gram plastikten kurtarır.",
+            advanced: "Yeniden doldurulabilir matara, yılda 0.3–0.7 kg plastik atığı önler; üretim ve taşımadan doğan emisyonları da düşürür."
+          },
+          polar: {
+            simple: "Enerji tasarrufu ~0.6–1.1 kg CO₂ azaltır; erime yavaşlar.",
+            medium: "Kullanmadığın cihazları kapatmak, kutup buzullarını koruyan CO₂ azaltımı sağlar.",
+            advanced: "Elektronikleri kapatmak ve verimli ışık seçmek ~0.6–1.1 kg CO₂ tasarrufu sağlayarak kutup buz erimesini yavaşlatır."
+          },
+          farm: {
+            simple: "İsrafı azaltmak ~120–200 L suyu kurtarır.",
+            medium: "Artan yemekleri değerlendirerek yüzlerce litre gizli suyu korursun.",
+            advanced: "Gıda israfını azaltmak, tedarik zincirindeki 120–200 litre sanal suyun boşa gitmesini engeller."
+          },
+          city: {
+            simple: "Bisiklet/toplu taşıma NOx & PM2.5’i düşürür; hava kalitesi artar.",
+            medium: "Bisiklet tercihleri şehirde daha temiz hava ve sessizlik sağlar.",
+            advanced: "Bisiklet ve toplu taşıma, NOx ve PM2.5 konsantrasyonlarını azaltıp şehirlerin hava kalitesini artırır."
+          }
+        },
+        congrats: "Tebrikler! Sürdürülebilir dünyaya ulaştın.",
+        animals: {
+          forest: "Sincap",
+          ocean: "Yunus",
+          polar: "Kutup Ayısı",
+          farm: "Arı",
+          city: "Serçe"
+        },
+        start: {
+          menu: "Menü",
+          help: "Yardım"
+        },
+        toastPause: "Oyun duraklatıldı",
+        toastResume: "Devam ediliyor",
+        gateLocked: "Kapı kilitli",
+        gateOpen: "Kapı açıldı!"
+      },
+      en: {
+        title: "Sustainable Route",
+        subtitle: "Travel with our cat to a sustainable world!",
+        newGame: "New Game",
+        cont: "Continue",
+        daily: "Daily Quest",
+        resume: "Resume",
+        paused: "Paused",
+        help: "WASD/Arrows: Move · E: Interact · P: Pause",
+        progress: "Progress",
+        collection: "Collection",
+        tasks: {
+          forest1: "Recycling match",
+          forest2: "Use tote bag",
+          ocean1: "Bottle choice",
+          ocean2: "Ocean cleanup",
+          polar1: "Shut down PC",
+          polar2: "Choose LED bulb",
+          farm1: "Prevent food waste",
+          farm2: "Buy local produce",
+          city1: "Bike vs Car",
+          city2: "Traffic maze"
+        },
+        info: {
+          forest: {
+            simple: "Sorting paper correctly can save ~0.4–0.7 kg CO₂ eq.",
+            medium: "Putting paper in the blue bin can prevent nearly half a kilo of CO₂ each year.",
+            advanced: "Proper paper recycling keeps fibers in use and avoids ~0.4–0.7 kg CO₂ eq emissions."
+          },
+          ocean: {
+            simple: "Using a bottle can prevent ~0.3–0.7 kg plastic/year.",
+            medium: "A refillable bottle replaces dozens of disposables every year.
+            advanced: "Choosing a reusable bottle avoids 0.3–0.7 kg plastic waste annually and cuts production emissions."
+          },
+          polar: {
+            simple: "Energy saving reduces ~0.6–1.1 kg CO₂; slows melting.",
+            medium: "Switching devices off protects polar ice by cutting emissions.",
+            advanced: "Powering down electronics and picking efficient lights saves ~0.6–1.1 kg CO₂, slowing ice melt."
+          },
+          farm: {
+            simple: "Cutting waste saves ~120–200 L of hidden water.",
+            medium: "Using leftovers protects the water used to grow food.",
+            advanced: "Reducing food waste saves 120–200 litres of embedded water along the supply chain."
+          },
+          city: {
+            simple: "Bike/public transport lowers NOx & PM2.5; cleaner air.",
+            medium: "Riding a bike keeps city air fresher and calmer.",
+            advanced: "Cycling and transit reduce NOx and PM2.5 concentrations, boosting urban air quality."
+          }
+        },
+        congrats: "Congrats! You reached the sustainable world.",
+        animals: {
+          forest: "Squirrel",
+          ocean: "Dolphin",
+          polar: "Polar Bear",
+          farm: "Bee",
+          city: "Sparrow"
+        },
+        start: {
+          menu: "Menu",
+          help: "Help"
+        },
+        toastPause: "Game paused",
+        toastResume: "Resuming",
+        gateLocked: "Gate locked",
+        gateOpen: "Gate opened!"
+      }
+    };
+
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    const state = {
+      lang: 'tr',
+      age: 'simple',
+      difficulty: 'normal',
+      mute: false,
+      autosave: true,
+      progress: 0,
+      tasksDone: {},
+      collection: {},
+      gameState: 'MENU',
+      nearOrb: null,
+      nearGate: null,
+      totalTasks: 10,
+      camera: { x: 0, y: 0 },
+      startTime: 0,
+      gateOpen: {},
+      footSteps: [],
+      toastTimer: 0,
+      infoTimer: 0
+    };
+
+    const settingsModal = document.getElementById('settingsModal');
+    const helpModal = document.getElementById('helpModal');
+    const infoCard = document.getElementById('infoCard');
+    const toast = document.getElementById('toast');
+
+    const hintChip = document.getElementById('taskHint');
+    const progressFill = document.getElementById('progressFill');
+    const progressLabel = document.getElementById('progressLabel');
+    const collectionLabel = document.getElementById('collectionLabel');
+    const collectionBtn = document.getElementById('collectionBtn');
+    const collectionPanel = document.getElementById('collectionPanel');
+    const collectionList = document.getElementById('collectionList');
+
+    const startOverlay = document.getElementById('startOverlay');
+
+    const pauseCard = document.getElementById('pauseCard');
+
+    const forestMatchModal = document.getElementById('forestMatchModal');
+    const oceanBottleModal = document.getElementById('oceanBottleModal');
+    const oceanCatchModal = document.getElementById('oceanCatchModal');
+    const cityMazeModal = document.getElementById('cityMazeModal');
+    const bikeChoiceModal = document.getElementById('bikeChoiceModal');
+
+    const languageSelect = document.getElementById('languageSelect');
+    const ageSelect = document.getElementById('ageSelect');
+    const difficultySelect = document.getElementById('difficultySelect');
+    const muteToggle = document.getElementById('muteToggle');
+    const autosaveToggle = document.getElementById('autosaveToggle');
+
+    const AudioManager = (() => {
+      let ctxAudio;
+      let muted = false;
+      function ensureContext() {
+        if (!ctxAudio) {
+          ctxAudio = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (ctxAudio.state === 'suspended') ctxAudio.resume();
+      }
+      function chord() {
+        if (muted) return;
+        ensureContext();
+        const now = ctxAudio.currentTime;
+        const freqs = [392, 493.88, 587];
+        freqs.forEach((f, i) => {
+          const osc = ctxAudio.createOscillator();
+          const gain = ctxAudio.createGain();
+          osc.type = 'triangle';
+          osc.frequency.value = f;
+          gain.gain.setValueAtTime(0.0001, now);
+          gain.gain.linearRampToValueAtTime(0.15, now + 0.02);
+          gain.gain.linearRampToValueAtTime(0.001, now + 0.6 + i * 0.05);
+          osc.connect(gain).connect(ctxAudio.destination);
+          osc.start(now + i * 0.02);
+          osc.stop(now + 0.9);
+        });
+      }
+      function blip(freq = 220) {
+        if (muted) return;
+        ensureContext();
+        const osc = ctxAudio.createOscillator();
+        const gain = ctxAudio.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = freq;
+        gain.gain.value = 0.0001;
+        gain.gain.linearRampToValueAtTime(0.2, ctxAudio.currentTime + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, ctxAudio.currentTime + 0.4);
+        osc.connect(gain).connect(ctxAudio.destination);
+        osc.start();
+        osc.stop(ctxAudio.currentTime + 0.4);
+      }
+      return {
+        chord,
+        blip,
+        setMute(value) {
+          muted = value;
+        }
+      }
+    })();
+
+    class ParticleSystem {
+      constructor() {
+        this.particles = [];
+      }
+      spawn(x, y, color) {
+        for (let i = 0; i < 24; i++) {
+          this.particles.push({
+            x,
+            y,
+            vx: (Math.random() - 0.5) * 3,
+            vy: (Math.random() - 1) * 3,
+            life: 1,
+            color: color || `hsl(${Math.random() * 60 + 100}, 80%, 60%)`
+          });
+        }
+      }
+      update(dt) {
+        this.particles = this.particles.filter(p => p.life > 0);
+        this.particles.forEach(p => {
+          p.x += p.vx * dt * 60;
+          p.y += p.vy * dt * 60;
+          p.vy += 0.05 * dt * 60;
+          p.life -= dt * 0.6;
+        });
+      }
+      draw(ctx, camera) {
+        ctx.save();
+        this.particles.forEach(p => {
+          ctx.globalAlpha = Math.max(p.life, 0);
+          ctx.fillStyle = p.color;
+          ctx.fillRect(p.x - camera.x, p.y - camera.y, 6, 6);
+        });
+        ctx.restore();
+      }
+    }
+
+    const particles = new ParticleSystem();
+
+    const Path = (() => {
+      const pathWidth = 220;
+      const points = [
+        { x: 200, y: 640 },
+        { x: 320, y: 520 },
+        { x: 420, y: 400 },
+        { x: 480, y: 280 },
+        { x: 600, y: 180 },
+        { x: 760, y: 120 },
+        { x: 920, y: 200 },
+        { x: 1040, y: 320 },
+        { x: 1080, y: 480 },
+        { x: 960, y: 600 },
+        { x: 780, y: 680 },
+        { x: 640, y: 780 },
+        { x: 520, y: 900 }
+      ];
+
+      const colors = {
+        forest: '#163121',
+        ocean: '#0e3145',
+        polar: '#243645',
+        farm: '#3e2b15',
+        city: '#1d2546'
+      };
+
+      const segments = [];
+      const prefix = [0];
+      let totalLength = 0;
+      for (let i = 0; i < points.length - 1; i++) {
+        const a = points[i];
+        const b = points[i + 1];
+        const length = Math.hypot(b.x - a.x, b.y - a.y);
+        segments.push({ a, b, length });
+        totalLength += length;
+        prefix.push(totalLength);
+      }
+
+      const biomeOrder = ['forest', 'ocean', 'polar', 'farm', 'city'];
+
+      function pointToSegmentDistance(px, py, a, b) {
+        const abx = b.x - a.x;
+        const aby = b.y - a.y;
+        const t = Math.max(0, Math.min(1, ((px - a.x) * abx + (py - a.y) * aby) / (abx * abx + aby * aby)));
+        const projx = a.x + abx * t;
+        const projy = a.y + aby * t;
+        return { dist: Math.hypot(px - projx, py - projy), projx, projy, t };
+      }
+
+      function isInside(px, py) {
+        let minDist = Infinity;
+        segments.forEach(seg => {
+          const { dist } = pointToSegmentDistance(px, py, seg.a, seg.b);
+          if (dist < minDist) minDist = dist;
+        });
+        return minDist <= pathWidth / 2;
+      }
+
+      function nearestPoint(px, py) {
+        let best = { dist: Infinity, projx: 0, projy: 0, segIndex: 0, t: 0 };
+        segments.forEach((seg, idx) => {
+          const res = pointToSegmentDistance(px, py, seg.a, seg.b);
+          if (res.dist < best.dist) best = { ...res, segIndex: idx };
+        });
+        return best;
+      }
+
+      function distanceAt(px, py) {
+        const near = nearestPoint(px, py);
+        return prefix[near.segIndex] + near.t * segments[near.segIndex].length;
+      }
+
+      function draw(ctx, camera) {
+        ctx.save();
+        ctx.translate(-camera.x, -camera.y);
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.lineWidth = pathWidth + 40;
+        ctx.strokeStyle = '#141a34';
+        ctx.beginPath();
+        ctx.moveTo(points[0].x, points[0].y);
+        for (let i = 1; i < points.length; i++) {
+          ctx.lineTo(points[i].x, points[i].y);
+        }
+        ctx.stroke();
+
+        ctx.lineWidth = pathWidth;
+        ctx.strokeStyle = '#202a52';
+        ctx.stroke();
+
+        const sectionLength = totalLength / biomeOrder.length;
+        let consumed = 0;
+        segments.forEach(seg => {
+          const startLen = consumed;
+          const endLen = consumed + seg.length;
+          let startBiome = Math.floor(startLen / sectionLength);
+          let endBiome = Math.floor(Math.max(0, endLen - 1) / sectionLength);
+          if (startBiome === endBiome) {
+            ctx.strokeStyle = colors[biomeOrder[startBiome]];
+            ctx.lineWidth = pathWidth - 30;
+            ctx.beginPath();
+            ctx.moveTo(seg.a.x, seg.a.y);
+            ctx.lineTo(seg.b.x, seg.b.y);
+            ctx.stroke();
+          } else {
+            const split = (sectionLength * (startBiome + 1) - startLen) / seg.length;
+            const mid = {
+              x: seg.a.x + (seg.b.x - seg.a.x) * split,
+              y: seg.a.y + (seg.b.y - seg.a.y) * split
+            };
+            ctx.strokeStyle = colors[biomeOrder[startBiome]];
+            ctx.lineWidth = pathWidth - 30;
+            ctx.beginPath();
+            ctx.moveTo(seg.a.x, seg.a.y);
+            ctx.lineTo(mid.x, mid.y);
+            ctx.stroke();
+            ctx.strokeStyle = colors[biomeOrder[endBiome]];
+            ctx.beginPath();
+            ctx.moveTo(mid.x, mid.y);
+            ctx.lineTo(seg.b.x, seg.b.y);
+            ctx.stroke();
+          }
+          consumed += seg.length;
+        });
+
+        biomeOrder.forEach((biome, idx) => {
+          const lengthAt = sectionLength * idx + sectionLength / 2;
+          let travelled = 0;
+          let pos = points[0];
+          for (const seg of segments) {
+            if (travelled + seg.length >= lengthAt) {
+              const t = (lengthAt - travelled) / seg.length;
+              pos = { x: seg.a.x + (seg.b.x - seg.a.x) * t, y: seg.a.y + (seg.b.y - seg.a.y) * t };
+              break;
+            }
+            travelled += seg.length;
+          }
+          ctx.save();
+          ctx.translate(pos.x, pos.y - 90);
+          ctx.fillStyle = 'rgba(0,0,0,0.35)';
+          ctx.fillRect(-60, -6, 120, 12);
+          ctx.fillStyle = '#182035';
+          ctx.fillRect(-70, -50, 140, 54);
+          ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+          ctx.lineWidth = 3;
+          ctx.strokeRect(-70, -50, 140, 54);
+          ctx.fillStyle = '#fff';
+          ctx.font = '16px Nunito';
+          ctx.textAlign = 'center';
+          ctx.fillText(biome.toUpperCase(), 0, -18);
+          ctx.restore();
+        });
+
+        ctx.restore();
+      }
+
+      return { points, segments, colors, biomeOrder, pathWidth, totalLength, isInside, nearestPoint, distanceAt, draw };
+    })();
+
+    class Player {
+      constructor() {
+        this.reset();
+      }
+      reset() {
+        this.x = Path.points[0].x;
+        this.y = Path.points[0].y;
+        this.speed = 3.6;
+        this.vx = 0;
+        this.vy = 0;
+        this.blinkTimer = 0;
+        this.tailTimer = 0;
+        this.stepTimer = 0;
+        this.radius = 24;
+      }
+      update(dt) {
+        const diffMultiplier = this.getDifficultyMultiplier();
+        const input = InputManager.vector();
+        const speed = this.speed * diffMultiplier;
+        const prevX = this.x;
+        const prevY = this.y;
+
+        if (input.x !== 0 || input.y !== 0) {
+          const len = Math.hypot(input.x, input.y) || 1;
+          this.vx = (input.x / len) * speed;
+          this.vy = (input.y / len) * speed;
+          this.stepTimer += dt * 12;
+          if (this.stepTimer > Math.PI * 2) this.stepTimer -= Math.PI * 2;
+          if (Math.random() < 0.1) {
+            state.footSteps.push({ x: this.x, y: this.y, life: 1 });
+          }
+        } else {
+          this.vx *= 0.82;
+          this.vy *= 0.82;
+          this.stepTimer = 0;
+        }
+
+        this.x += this.vx * dt * 60;
+        this.y += this.vy * dt * 60;
+
+        if (!Path.isInside(this.x, this.y)) {
+          this.x = prevX;
+          this.y = prevY;
+          this.vx = 0;
+          this.vy = 0;
+        }
+
+        const currentDistance = Path.distanceAt(this.x, this.y);
+        for (const gate of gates) {
+          if (gate.open) continue;
+          if (currentDistance > gate.distance - 20) {
+            this.x = prevX;
+            this.y = prevY;
+            this.vx = 0;
+            this.vy = 0;
+            break;
+          }
+        }
+
+        this.blinkTimer += dt;
+        this.tailTimer += dt;
+      }
+      draw(ctx, camera) {
+        ctx.save();
+        ctx.translate(this.x - camera.x, this.y - camera.y);
+        const bob = Math.sin(this.stepTimer) * 2;
+        ctx.translate(0, bob);
+        ctx.fillStyle = '#f7d6c8';
+        ctx.strokeStyle = 'rgba(0,0,0,0.2)';
+        ctx.lineWidth = 2;
+        const tailSwing = Math.sin(this.tailTimer * 4) * 0.4;
+        ctx.save();
+        ctx.translate(-20, 8);
+        ctx.rotate(-0.6 + tailSwing);
+        ctx.fillStyle = '#f0c2b0';
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.quadraticCurveTo(-20, 14, -10, 28);
+        ctx.quadraticCurveTo(10, 18, 10, 8);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+
+        ctx.beginPath();
+        ctx.ellipse(0, 6, 28, 34, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.save();
+        ctx.translate(0, -28);
+        ctx.beginPath();
+        ctx.arc(0, 0, 22, 0, Math.PI * 2);
+        ctx.fillStyle = '#fbe5d9';
+        ctx.fill();
+
+        ctx.fillStyle = '#f0c2b0';
+        ctx.beginPath();
+        ctx.moveTo(-18, -8);
+        ctx.lineTo(-6, -24);
+        ctx.lineTo(0, -6);
+        ctx.closePath();
+        ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(18, -8);
+        ctx.lineTo(6, -24);
+        ctx.lineTo(0, -6);
+        ctx.closePath();
+        ctx.fill();
+
+        const blink = (Math.sin(this.blinkTimer * 2.5) > 0.95) ? 0 : 1;
+        ctx.fillStyle = '#333';
+        ctx.beginPath();
+        ctx.ellipse(-8, -2, 3, 4 * blink, 0, 0, Math.PI * 2);
+        ctx.ellipse(8, -2, 3, 4 * blink, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.strokeStyle = '#333';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(0, 6, 6, 0, Math.PI);
+        ctx.stroke();
+
+        ctx.fillStyle = '#faaa96';
+        ctx.beginPath();
+        ctx.arc(-12, 6, 4, 0, Math.PI * 2);
+        ctx.arc(12, 6, 4, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
+        ctx.restore();
+      }
+      getDifficultyMultiplier() {
+        switch (state.difficulty) {
+          case 'easy': return 0.95;
+          case 'hard': return 1.08;
+          default: return 1.0;
+        }
+      }
+    }
+
+    const player = new Player();
+
+    const InputManager = (() => {
+      const keys = new Set();
+      const map = {
+        KeyW: 'up', ArrowUp: 'up',
+        KeyS: 'down', ArrowDown: 'down',
+        KeyA: 'left', ArrowLeft: 'left',
+        KeyD: 'right', ArrowRight: 'right',
+        KeyE: 'interact', Space: 'interact',
+        KeyP: 'pause', Escape: 'pause'
+      };
+      const pressed = {};
+      window.addEventListener('keydown', (e) => {
+        const action = map[e.code];
+        if (action) {
+          if (action !== 'pause') e.preventDefault();
+          keys.add(action);
+          pressed[action] = true;
+        }
+      });
+      window.addEventListener('keyup', (e) => {
+        const action = map[e.code];
+        if (action) {
+          keys.delete(action);
+        }
+      });
+      return {
+        vector() {
+          let x = 0, y = 0;
+          if (keys.has('left')) x -= 1;
+          if (keys.has('right')) x += 1;
+          if (keys.has('up')) y -= 1;
+          if (keys.has('down')) y += 1;
+          return { x, y };
+        },
+        consume(action) {
+          if (pressed[action]) {
+            delete pressed[action];
+            return true;
+          }
+          return false;
+        },
+        isDown(action) {
+          return keys.has(action);
+        }
+      };
+    })();
+
+    const tasks = [];
+    const gates = [];
+    let finalPortal;
+
+    function initWorld() {
+      tasks.length = 0;
+      gates.length = 0;
+      const sectionLength = Path.totalLength / Path.biomeOrder.length;
+      for (let i = 0; i < Path.biomeOrder.length; i++) {
+        const biome = Path.biomeOrder[i];
+        const startLen = sectionLength * i + sectionLength * 0.2;
+        const endLen = sectionLength * i + sectionLength * 0.8;
+        const gateLen = sectionLength * i + sectionLength * 0.95;
+        const gatePos = interpolatePath(gateLen);
+        gates.push({ biome, x: gatePos.x, y: gatePos.y, open: !!state.gateOpen[biome], distance: gateLen });
+        const orbPos1 = interpolatePath(startLen);
+        const orbPos2 = interpolatePath((startLen + endLen) / 2);
+        tasks.push(createTask(biome, 1, orbPos1.x, orbPos1.y));
+        tasks.push(createTask(biome, 2, orbPos2.x, orbPos2.y));
+      }
+      const portalDistance = Path.totalLength + 120;
+      const portalPos = interpolatePath(portalDistance);
+      finalPortal = { x: portalPos.x, y: portalPos.y, active: false, distance: portalDistance };
+    }
+
+    function interpolatePath(distance) {
+      let travelled = 0;
+      for (const seg of Path.segments) {
+        if (travelled + seg.length >= distance) {
+          const t = (distance - travelled) / seg.length;
+          return { x: seg.a.x + (seg.b.x - seg.a.x) * t, y: seg.a.y + (seg.b.y - seg.a.y) * t };
+        }
+        travelled += seg.length;
+      }
+      return Path.points[Path.points.length - 1];
+    }
+
+    function createTask(biome, num, x, y) {
+      const id = `${biome}${num}`;
+      const done = !!state.tasksDone[id];
+      return {
+        id,
+        biome,
+        num,
+        x,
+        y,
+        done,
+        pulse: Math.random() * Math.PI * 2
+      };
+    }
+
+    function drawTasks(ctx, camera) {
+      tasks.forEach(task => {
+        task.pulse += 0.04;
+        ctx.save();
+        ctx.translate(task.x - camera.x, task.y - camera.y);
+        const scale = 1 + Math.sin(task.pulse) * 0.12;
+        ctx.beginPath();
+        const radius = 22 * scale;
+        const gradient = ctx.createRadialGradient(0, 0, 6, 0, 0, radius);
+        gradient.addColorStop(0, 'rgba(118,255,158,0.85)');
+        gradient.addColorStop(1, 'rgba(118,255,158,0.05)');
+        ctx.fillStyle = gradient;
+        ctx.arc(0, 0, radius, 0, Math.PI * 2);
+        ctx.fill();
+        if (task.done) {
+          ctx.strokeStyle = 'rgba(118,255,158,0.8)';
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.arc(0, 0, 18, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.strokeStyle = '#fff';
+          ctx.lineWidth = 3;
+          ctx.moveTo(-8, 0);
+          ctx.lineTo(-2, 8);
+          ctx.lineTo(10, -6);
+          ctx.stroke();
+        } else {
+          ctx.fillStyle = 'rgba(118,255,158,0.7)';
+          ctx.font = 'bold 14px Nunito';
+          ctx.textAlign = 'center';
+          ctx.fillText('E', 0, 5);
+        }
+        ctx.restore();
+      });
+    }
+
+    function drawGates(ctx, camera) {
+      gates.forEach(gate => {
+        ctx.save();
+        ctx.translate(gate.x - camera.x, gate.y - camera.y);
+        ctx.fillStyle = gate.open ? 'rgba(118,255,158,0.2)' : 'rgba(220,80,120,0.5)';
+        ctx.strokeStyle = gate.open ? 'rgba(118,255,158,0.9)' : 'rgba(255,120,150,0.9)';
+        ctx.lineWidth = 8;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 80, 14, Math.PI / 6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+      });
+    }
+
+    function drawPortal(ctx, camera) {
+      ctx.save();
+      ctx.translate(finalPortal.x - camera.x, finalPortal.y - camera.y);
+      const active = finalPortal.active;
+      ctx.strokeStyle = active ? 'rgba(118,255,158,0.8)' : 'rgba(255,255,255,0.25)';
+      ctx.lineWidth = 10;
+      ctx.beginPath();
+      ctx.arc(0, 0, 60, 0, Math.PI * 2);
+      ctx.stroke();
+      if (active) {
+        ctx.fillStyle = 'rgba(118,255,158,0.22)';
+        ctx.beginPath();
+        ctx.arc(0, 0, 48, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 16px Nunito';
+        ctx.textAlign = 'center';
+        ctx.fillText('PORTAL', 0, 6);
+      }
+      ctx.restore();
+    }
+
+    function updateFootsteps(dt) {
+      state.footSteps = state.footSteps.filter(f => f.life > 0);
+      state.footSteps.forEach(f => {
+        f.life -= dt * 0.5;
+      });
+    }
+
+    function drawFootsteps(ctx, camera) {
+      state.footSteps.forEach(f => {
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, f.life);
+        ctx.fillStyle = 'rgba(255,255,255,0.2)';
+        ctx.beginPath();
+        ctx.ellipse(f.x - camera.x, f.y - camera.y, 6, 12, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      });
+    }
+
+    function updateCamera(dt) {
+      const followX = player.x - canvas.width / 2;
+      const followY = player.y - canvas.height / 2;
+      state.camera.x += (followX - state.camera.x) * Math.min(1, dt * 6);
+      state.camera.y += (followY - state.camera.y) * Math.min(1, dt * 6);
+    }
+
+    function nearestTask() {
+      let best = null;
+      let minDist = 9999;
+      tasks.forEach(task => {
+        if (task.done) return;
+        const dist = Math.hypot(task.x - player.x, task.y - player.y);
+        if (dist < 90 && dist < minDist) {
+          minDist = dist;
+          best = task;
+        }
+      });
+      return best;
+    }
+
+    function nearestGate() {
+      let best = null;
+      let minDist = 9999;
+      gates.forEach(gate => {
+        const dist = Math.hypot(gate.x - player.x, gate.y - player.y);
+        if (dist < 110 && dist < minDist) {
+          minDist = dist;
+          best = gate;
+        }
+      });
+      return best;
+    }
+
+    let lastTime = 0;
+    function loop(timestamp) {
+      if (!lastTime) lastTime = timestamp;
+      const dt = Math.min((timestamp - lastTime) / 1000, 0.05);
+      lastTime = timestamp;
+
+      if (state.gameState === 'PLAYING') {
+        if (InputManager.consume('pause')) togglePause(true);
+        player.update(dt);
+        updateFootsteps(dt);
+        updateCamera(dt);
+        particles.update(dt);
+
+        state.nearOrb = nearestTask();
+        state.nearGate = nearestGate();
+        if (state.nearOrb) {
+          hintChip.classList.add('glow');
+          hintChip.textContent = `${state.nearOrb.num === 1 ? '①' : '②'} ${translateTask(state.nearOrb)} · (E)`;
+        } else if (state.nearGate && !state.nearGate.open) {
+          hintChip.classList.add('glow');
+          hintChip.textContent = `${translateText('gateLocked')}`;
+        } else {
+          hintChip.classList.remove('glow');
+          hintChip.textContent = '🐾';
+        }
+
+        if (InputManager.consume('interact')) {
+          if (state.nearOrb) {
+            handleTaskInteraction(state.nearOrb);
+          } else if (state.nearGate && state.nearGate.open) {
+            AudioManager.blip();
+          }
+        }
+
+        if (state.progress >= state.totalTasks) {
+          finalPortal.active = true;
+          if (Math.hypot(finalPortal.x - player.x, finalPortal.y - player.y) < 90) {
+            showCongrats();
+          }
+        }
+      } else {
+        if (state.gameState === 'PAUSED') {
+          if (InputManager.consume('pause')) togglePause(false);
+        }
+      }
+
+      draw();
+      requestAnimationFrame(loop);
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      Path.draw(ctx, state.camera);
+      drawGates(ctx, state.camera);
+      drawFootsteps(ctx, state.camera);
+      drawTasks(ctx, state.camera);
+      drawPortal(ctx, state.camera);
+      player.draw(ctx, state.camera);
+      particles.draw(ctx, state.camera);
+    }
+
+    function translateTask(task) {
+      return L[state.lang].tasks[`${task.biome}${task.num}`];
+    }
+
+    function translateText(key) {
+      return L[state.lang][key] || key;
+    }
+
+    function showInfoCard(entry) {
+      const biome = typeof entry === 'string' ? entry : entry.biome;
+      const taskName = typeof entry === 'string' ? '' : translateTask(entry);
+      infoCard.classList.remove('hidden');
+      infoCard.classList.remove('fade');
+      const title = infoCard.querySelector('#infoTitle');
+      const body = infoCard.querySelector('#infoBody');
+      title.textContent = taskName ? `${translateBiomeName(biome)} · ${taskName}` : translateBiomeName(biome);
+      body.textContent = L[state.lang].info[biome][state.age];
+      void infoCard.offsetWidth;
+      infoCard.classList.add('fade');
+      state.infoTimer = Date.now();
+      setTimeout(() => infoCard.classList.add('hidden'), 4000);
+    }
+
+    function translateBiomeName(biome) {
+      const map = {
+        forest: state.lang === 'tr' ? 'Orman' : 'Forest',
+        ocean: state.lang === 'tr' ? 'Okyanus' : 'Ocean',
+        polar: state.lang === 'tr' ? 'Kutup' : 'Polar',
+        farm: state.lang === 'tr' ? 'Tarım' : 'Farm',
+        city: state.lang === 'tr' ? 'Şehir' : 'City'
+      };
+      return map[biome];
+    }
+
+    function handleTaskInteraction(task) {
+      if (task.done) return;
+      task.done = true;
+      state.tasksDone[task.id] = true;
+      state.progress = Math.min(state.totalTasks, state.progress + 1);
+      showInfoCard(task);
+      particles.spawn(task.x, task.y, '#76ff9e');
+      AudioManager.chord();
+      updateProgressUI();
+      addCollection(task.biome);
+      if (task.biome === 'forest' && task.num === 1) {
+        openForestMatch();
+      } else if (task.biome === 'ocean' && task.num === 1) {
+        openOceanBottle();
+      } else if (task.biome === 'ocean' && task.num === 2) {
+        openOceanCatch();
+      } else if (task.biome === 'city' && task.num === 1) {
+        openBikeChoice();
+      } else if (task.biome === 'city' && task.num === 2) {
+        openCityMaze();
+      }
+      unlockGateIfDone(task.biome);
+      saveState();
+    }
+
+    function unlockGateIfDone(biome) {
+      const gate = gates.find(g => g.biome === biome);
+      if (!gate) return;
+      const tasksForBiome = tasks.filter(t => t.biome === biome);
+      if (tasksForBiome.every(t => t.done)) {
+        gate.open = true;
+        state.gateOpen[biome] = true;
+        showToast(translateText('gateOpen'));
+      }
+    }
+
+    function showToast(message) {
+      toast.textContent = message;
+      toast.classList.remove('hidden');
+      state.toastTimer = Date.now();
+      setTimeout(() => toast.classList.add('hidden'), 1600);
+    }
+
+    function updateProgressUI() {
+      const percent = Math.round((state.progress / state.totalTasks) * 100);
+      progressFill.style.width = `${percent}%`;
+      progressLabel.textContent = `${percent}%`;
+      const collected = Object.keys(state.collection).length;
+      collectionLabel.textContent = `${collected} / 5`;
+      renderCollection();
+    }
+
+    function addCollection(biome) {
+      if (!state.collection[biome]) {
+        state.collection[biome] = true;
+      }
+    }
+
+    function renderCollection() {
+      const animals = L[state.lang].animals;
+      collectionList.innerHTML = '';
+      Object.keys(animals).forEach(biome => {
+        const card = document.createElement('div');
+        card.className = 'collection-card';
+        if (state.collection[biome]) card.classList.add('collected');
+        card.innerHTML = `<strong>${animals[biome]}</strong><span>${translateBiomeName(biome)}</span>`;
+        collectionList.appendChild(card);
+      });
+    }
+
+    function showCongrats() {
+      if (state.gameState === 'GAME_OVER') return;
+      state.gameState = 'GAME_OVER';
+      finalPortal.active = false;
+      showInfoCard('city');
+      showToast(L[state.lang].congrats);
+      setTimeout(() => {
+        startOverlay.classList.remove('hidden');
+      }, 1200);
+    }
+
+    function togglePause(pause) {
+      if (pause) {
+        state.gameState = 'PAUSED';
+        pauseCard.classList.remove('hidden');
+        showToast(translateText('toastPause'));
+      } else {
+        pauseCard.classList.add('hidden');
+        state.gameState = 'PLAYING';
+        showToast(translateText('toastResume'));
+      }
+    }
+
+    function loadState() {
+      try {
+        const data = JSON.parse(localStorage.getItem('sustainable-route-save') || '{}');
+        if (!data) return;
+        state.lang = data.lang || state.lang;
+        state.age = data.age || state.age;
+        state.difficulty = data.difficulty || state.difficulty;
+        state.mute = data.mute || false;
+        state.autosave = data.autosave ?? true;
+        state.progress = data.progress || 0;
+        state.tasksDone = data.tasksDone || {};
+        state.collection = data.collection || {};
+        state.gateOpen = data.gateOpen || {};
+      } catch (err) {
+        console.warn('Save load failed', err);
+      }
+    }
+
+    function saveState() {
+      if (!state.autosave) return;
+      const payload = {
+        lang: state.lang,
+        age: state.age,
+        difficulty: state.difficulty,
+        mute: state.mute,
+        autosave: state.autosave,
+        progress: state.progress,
+        tasksDone: state.tasksDone,
+        collection: state.collection,
+        gateOpen: state.gateOpen
+      };
+      localStorage.setItem('sustainable-route-save', JSON.stringify(payload));
+    }
+
+    function resetProgress() {
+      state.progress = 0;
+      state.tasksDone = {};
+      state.collection = {};
+      state.gateOpen = {};
+      tasks.forEach(t => t.done = false);
+      gates.forEach(g => g.open = false);
+      finalPortal.active = false;
+      player.reset();
+      updateProgressUI();
+      saveState();
+    }
+
+    function startGame(newGame = true) {
+      canvas.focus();
+      startOverlay.classList.add('hidden');
+      state.gameState = 'PLAYING';
+      if (newGame) {
+        resetProgress();
+      }
+      updateProgressUI();
+    }
+
+    function openSettings() {
+      settingsModal.classList.remove('hidden');
+    }
+
+    function closeSettings() {
+      settingsModal.classList.add('hidden');
+      saveState();
+    }
+
+    function openHelp() {
+      helpModal.classList.remove('hidden');
+    }
+
+    function closeHelp() {
+      helpModal.classList.add('hidden');
+    }
+
+    collectionBtn.addEventListener('click', () => {
+      collectionPanel.classList.toggle('open');
+    });
+
+    document.getElementById('newGameBtn').addEventListener('click', () => startGame(true));
+    document.getElementById('continueBtn').addEventListener('click', () => startGame(false));
+    document.getElementById('dailyBtn').addEventListener('click', () => startGame(true));
+
+    document.getElementById('menuBtn').addEventListener('click', () => {
+      startOverlay.classList.remove('hidden');
+      state.gameState = 'MENU';
+      saveState();
+    });
+
+    document.getElementById('pauseBtn').addEventListener('click', () => togglePause(true));
+    document.getElementById('resumeBtn').addEventListener('click', () => togglePause(false));
+    document.getElementById('pauseMenuBtn').addEventListener('click', () => {
+      togglePause(false);
+      startOverlay.classList.remove('hidden');
+      state.gameState = 'MENU';
+    });
+
+    document.getElementById('settingsBtn').addEventListener('click', openSettings);
+    document.getElementById('closeSettingsBtn').addEventListener('click', closeSettings);
+    document.getElementById('helpBtn').addEventListener('click', openHelp);
+    document.getElementById('closeHelpBtn').addEventListener('click', closeHelp);
+
+    languageSelect.addEventListener('change', () => {
+      state.lang = languageSelect.value;
+      updateTexts();
+      renderCollection();
+      saveState();
+    });
+
+    ageSelect.addEventListener('change', () => {
+      state.age = ageSelect.value;
+      saveState();
+    });
+
+    difficultySelect.addEventListener('change', () => {
+      state.difficulty = difficultySelect.value;
+      saveState();
+    });
+
+    muteToggle.addEventListener('change', () => {
+      state.mute = muteToggle.checked;
+      AudioManager.setMute(state.mute);
+      saveState();
+    });
+
+    autosaveToggle.addEventListener('change', () => {
+      state.autosave = autosaveToggle.checked;
+      saveState();
+    });
+
+    canvas.addEventListener('pointerdown', () => {
+      canvas.focus();
+    });
+
+    function updateTexts() {
+      const data = L[state.lang];
+      document.getElementById('menuTitle').textContent = data.title;
+      document.getElementById('menuSubtitle').textContent = data.subtitle;
+      document.getElementById('newGameBtn').textContent = `🌟 ${data.newGame}`;
+      document.getElementById('continueBtn').textContent = `▶️ ${data.cont}`;
+      document.getElementById('dailyBtn').textContent = `📅 ${data.daily}`;
+      document.getElementById('pauseTitle').textContent = data.paused;
+      document.getElementById('pauseHint').textContent = data.help;
+      document.getElementById('resumeBtn').textContent = `▶️ ${data.resume}`;
+      document.getElementById('pauseMenuBtn').textContent = '🏠 ' + data.start.menu;
+      document.getElementById('menuBtn').textContent = `☰ ${data.start.menu}`;
+      document.getElementById('helpBtn').textContent = `❔ ${data.start.help}`;
+      document.getElementById('settingsBtn').textContent = state.lang === 'tr' ? '⚙ Ayarlar' : '⚙ Settings';
+      document.getElementById('pauseBtn').textContent = state.lang === 'tr' ? '⏸ Duraklat' : '⏸ Pause';
+      document.getElementById('helpText').textContent = data.help;
+      collectionBtn.textContent = state.lang === 'tr' ? '📘 Koleksiyon' : '📘 Collection';
+      document.querySelector('#forestMatchTitle').textContent = data.tasks.forest1;
+      document.querySelector('#oceanBottleTitle').textContent = data.tasks.ocean1;
+      document.querySelector('#oceanBottlePrompt').textContent = state.lang === 'tr' ? 'Sence hangisi çevre için daha iyi?' : 'Which choice is kinder to the planet?';
+      document.querySelector('#oceanCatchTitle').textContent = data.tasks.ocean2;
+      document.querySelector('#oceanCatchHint').textContent = state.lang === 'tr' ? 'Fare veya dokunuşla ağı hareket ettir, 3 çöp yakala!' : 'Drag the net with mouse or touch, catch 3 trash pieces!';
+      document.querySelector('#cityMazeTitle').textContent = data.tasks.city2;
+      document.querySelector('#cityMazeHint').textContent = state.lang === 'tr' ? 'Ok tuşlarıyla çıkışa ulaş.' : 'Use arrow keys to find the exit.';
+      document.querySelector('#bikeChoiceTitle').textContent = data.tasks.city1;
+      document.querySelector('#bikeChoicePrompt').textContent = state.lang === 'tr' ? 'Hangisini seçersin?' : 'Which will you choose?';
+      document.getElementById('langLabel').textContent = state.lang === 'tr' ? 'Dil' : 'Language';
+      document.getElementById('ageLabel').textContent = state.lang === 'tr' ? 'Yaş Seviyesi' : 'Age Level';
+      document.getElementById('difficultyLabel').textContent = state.lang === 'tr' ? 'Zorluk' : 'Difficulty';
+      document.getElementById('muteLabel').textContent = state.lang === 'tr' ? 'Sesi kapat' : 'Mute audio';
+      document.getElementById('autosaveLabel').textContent = state.lang === 'tr' ? 'Otomatik kaydet' : 'Auto save';
+      document.getElementById('closeSettingsBtn').textContent = state.lang === 'tr' ? '✔ Kapat' : '✔ Close';
+      document.getElementById('closeHelpBtn').textContent = state.lang === 'tr' ? '✔ Anladım' : '✔ Got it';
+      renderCollection();
+    }
+
+    function setupMiniGames() {
+      setupForestMatch();
+      setupOceanBottle();
+      setupOceanCatch();
+      setupCityMaze();
+      setupBikeChoice();
+    }
+
+    function openForestMatch() {
+      openModal(forestMatchModal);
+      startCountdown('forestMatchTimer', 12, () => {
+        closeModal(forestMatchModal);
+      });
+    }
+
+    function setupForestMatch() {
+      document.getElementById('forestMatchSubmit').addEventListener('click', () => {
+        const selects = forestMatchModal.querySelectorAll('select');
+        let correct = 0;
+        selects.forEach(sel => {
+          if (sel.value === sel.dataset.item) correct++;
+        });
+        if (correct === selects.length) {
+          showToast(state.lang === 'tr' ? 'Harika eşleşmeler!' : 'Perfect matches!');
+          closeModal(forestMatchModal);
+        } else {
+          showToast(state.lang === 'tr' ? 'Tekrar dene!' : 'Try again!');
+        }
+      });
+    }
+
+    function openOceanBottle() {
+      openModal(oceanBottleModal);
+      startCountdown('oceanBottleTimer', 12, () => {
+        closeModal(oceanBottleModal);
+      });
+    }
+
+    function setupOceanBottle() {
+      oceanBottleModal.querySelectorAll('button[data-choice]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          if (btn.dataset.choice === 'reusable') {
+            showToast(state.lang === 'tr' ? 'Doğru seçim!' : 'Great choice!');
+          } else {
+            showToast(state.lang === 'tr' ? 'Hadi matarayı seç!' : 'Pick the reusable bottle!');
+          }
+          closeModal(oceanBottleModal);
+        });
+      });
+    }
+
+    function openOceanCatch() {
+      openModal(oceanCatchModal);
+      startCatchGame();
+      startCountdown('oceanCatchTimer', 14, () => {
+        closeModal(oceanCatchModal);
+      });
+    }
+
+    let catchGame;
+    function startCatchGame() {
+      const canvasCatch = document.getElementById('catchCanvas');
+      const ctxCatch = canvasCatch.getContext('2d');
+      const net = { x: canvasCatch.width / 2, y: canvasCatch.height / 2, r: 32 };
+      const trash = Array.from({ length: 5 }, () => ({
+        x: Math.random() * canvasCatch.width,
+        y: Math.random() * canvasCatch.height,
+        r: 10 + Math.random() * 8,
+        caught: false
+      }));
+      let caughtCount = 0;
+
+      function drawCatch() {
+        ctxCatch.clearRect(0, 0, canvasCatch.width, canvasCatch.height);
+        ctxCatch.fillStyle = '#0a3950';
+        ctxCatch.fillRect(0, 0, canvasCatch.width, canvasCatch.height);
+        ctxCatch.fillStyle = 'rgba(154,215,255,0.2)';
+        ctxCatch.beginPath();
+        ctxCatch.arc(net.x, net.y, net.r, 0, Math.PI * 2);
+        ctxCatch.fill();
+        trash.forEach(t => {
+          if (t.caught) return;
+          ctxCatch.fillStyle = '#ffda75';
+          ctxCatch.beginPath();
+          ctxCatch.arc(t.x, t.y, t.r, 0, Math.PI * 2);
+          ctxCatch.fill();
+        });
+      }
+
+      function checkCatch() {
+        trash.forEach(t => {
+          if (t.caught) return;
+          const dist = Math.hypot(t.x - net.x, t.y - net.y);
+          if (dist < net.r) {
+            t.caught = true;
+            caughtCount++;
+            if (caughtCount >= 3) {
+              showToast(state.lang === 'tr' ? 'Denizler rahatladı!' : 'Ocean smiles!');
+              closeModal(oceanCatchModal);
+            }
+          }
+        });
+      }
+
+      function pointerMove(e) {
+        const rect = canvasCatch.getBoundingClientRect();
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        net.x = (clientX - rect.left) * (canvasCatch.width / rect.width);
+        net.y = (clientY - rect.top) * (canvasCatch.height / rect.height);
+        checkCatch();
+        drawCatch();
+      }
+
+      canvasCatch.addEventListener('pointermove', pointerMove);
+      canvasCatch.addEventListener('touchmove', pointerMove, { passive: false });
+      drawCatch();
+      catchGame = () => {
+        canvasCatch.removeEventListener('pointermove', pointerMove);
+        canvasCatch.removeEventListener('touchmove', pointerMove);
+      };
+    }
+
+    function openCityMaze() {
+      openModal(cityMazeModal);
+      startMazeGame();
+      startCountdown('cityMazeTimer', 15, () => {
+        closeModal(cityMazeModal);
+      });
+    }
+
+    let mazeGame;
+    function startMazeGame() {
+      const grid = [
+        'S....#',
+        '.##..#',
+        '.#...#',
+        '.#.###',
+        '.#...E',
+        '.#####'
+      ];
+      const mazeGrid = document.getElementById('mazeGrid');
+      mazeGrid.innerHTML = '';
+      let playerPos = { x: 0, y: 0 };
+      const exitPos = { x: 5, y: 4 };
+
+      grid.forEach((row, y) => {
+        row.split('').forEach((cell, x) => {
+          const div = document.createElement('div');
+          div.className = 'maze-cell';
+          if (cell === '#') div.classList.add('wall');
+          if (cell === 'S') {
+            playerPos = { x, y };
+          }
+          if (cell === 'E') {
+            div.innerHTML = '<div class="maze-exit">🚪</div>';
+          }
+          mazeGrid.appendChild(div);
+        });
+      });
+
+      function updateMaze() {
+        const cells = mazeGrid.querySelectorAll('.maze-cell');
+        cells.forEach(cell => cell.innerHTML = cell.innerHTML.includes('🚪') ? cell.innerHTML : '');
+        const index = playerPos.y * 6 + playerPos.x;
+        cells[index].innerHTML = '<div class="maze-player">🐾</div>';
+      }
+
+      function move(dx, dy) {
+        const nx = playerPos.x + dx;
+        const ny = playerPos.y + dy;
+        if (nx < 0 || ny < 0 || ny >= grid.length || nx >= grid[0].length) return;
+        if (grid[ny][nx] === '#') return;
+        playerPos = { x: nx, y: ny };
+        updateMaze();
+        if (nx === exitPos.x && ny === exitPos.y) {
+          showToast(state.lang === 'tr' ? 'Trafik akıyor!' : 'Traffic solved!');
+          closeModal(cityMazeModal);
+        }
+      }
+
+      function keyHandler(e) {
+        if (e.key === 'ArrowUp') move(0, -1);
+        if (e.key === 'ArrowDown') move(0, 1);
+        if (e.key === 'ArrowLeft') move(-1, 0);
+        if (e.key === 'ArrowRight') move(1, 0);
+      }
+
+      window.addEventListener('keydown', keyHandler);
+      updateMaze();
+      mazeGame = () => {
+        window.removeEventListener('keydown', keyHandler);
+      };
+    }
+
+    function openBikeChoice() {
+      openModal(bikeChoiceModal);
+    }
+
+    function setupBikeChoice() {
+      bikeChoiceModal.querySelectorAll('button[data-vehicle]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          if (btn.dataset.vehicle === 'bike') {
+            showToast(state.lang === 'tr' ? 'Bisiklet bonusu!' : 'Bike bonus!');
+            player.speed = 3.9;
+          } else {
+            showToast(state.lang === 'tr' ? 'Ah! 5 sn yavaşlama' : 'Oops! Slowed for 5s');
+            player.speed = 3.2;
+            setTimeout(() => player.speed = 3.6, 5000);
+          }
+          closeModal(bikeChoiceModal);
+        });
+      });
+    }
+
+    function openModal(modal) {
+      modal.classList.remove('hidden');
+      state.gameState = 'PAUSED';
+    }
+
+    function closeModal(modal) {
+      modal.classList.add('hidden');
+      if (modal === oceanCatchModal && catchGame) catchGame();
+      if (modal === cityMazeModal && mazeGame) mazeGame();
+      if (!document.querySelector('.mini-modal:not(.hidden)')) {
+        state.gameState = 'PLAYING';
+      }
+    }
+
+    document.getElementById('oceanCatchClose').addEventListener('click', () => closeModal(oceanCatchModal));
+    document.getElementById('cityMazeClose').addEventListener('click', () => closeModal(cityMazeModal));
+
+    function startCountdown(id, seconds, onEnd) {
+      const el = document.getElementById(id);
+      let remaining = seconds;
+      el.textContent = remaining;
+      const interval = setInterval(() => {
+        remaining--;
+        el.textContent = remaining;
+        if (remaining <= 0) {
+          clearInterval(interval);
+          if (onEnd) onEnd();
+        }
+      }, 1000);
+    }
+
+    function translateSaveToUI() {
+      languageSelect.value = state.lang;
+      ageSelect.value = state.age;
+      difficultySelect.value = state.difficulty;
+      muteToggle.checked = state.mute;
+      autosaveToggle.checked = state.autosave;
+    }
+
+    function bootstrap() {
+      loadState();
+      translateSaveToUI();
+      initWorld();
+      renderCollection();
+      updateTexts();
+      updateProgressUI();
+      setupMiniGames();
+      requestAnimationFrame(loop);
+    }
+
+    bootstrap();
+  </script>
 </body>
 </html>
